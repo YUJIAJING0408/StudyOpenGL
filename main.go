@@ -1,13 +1,13 @@
 package main
 
 import (
+	"StudyOpenGL/utils"
 	"fmt"
 	"go/build"
 	"image"
 	"image/draw"
 	_ "image/png"
 	"log"
-	"opengl/utils"
 	"os"
 	"runtime"
 	"strings"
@@ -21,20 +21,23 @@ const windowWidth = 800
 const windowHeight = 600
 
 func init() {
-	// GLFW event handling must run on the main OS thread
+	// 锁定线程是为了GLFW更稳定的运行
 	runtime.LockOSThread()
 }
 
 func main() {
+	// GLFW初始化
 	if err := glfw.Init(); err != nil {
 		log.Fatalln("failed to initialize glfw:", err)
 	}
+	// 延迟关闭GLFW
 	defer glfw.Terminate()
 
-	glfw.WindowHint(glfw.Resizable, glfw.False)
-	glfw.WindowHint(glfw.ContextVersionMajor, 4)
-	glfw.WindowHint(glfw.ContextVersionMinor, 1)
-	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
+	// GLFW初始化
+	glfw.WindowHint(glfw.Resizable, glfw.False)                 //窗口伸缩
+	glfw.WindowHint(glfw.ContextVersionMajor, 3)                //OpenGL大版本
+	glfw.WindowHint(glfw.ContextVersionMinor, 3)                //OpenGL小版本
+	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile) //使用OpenGL的核心模式
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 	window, err := glfw.CreateWindow(windowWidth, windowHeight, "Cube", nil, nil)
 	if err != nil {
