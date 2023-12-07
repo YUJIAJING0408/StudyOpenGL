@@ -39,7 +39,6 @@ func (cs CommonShader) BuildProgram() (program uint32, err error) {
 			return 0, err
 		}
 	}
-	println(vertShader)
 	program = gl.CreateProgram()
 	gl.AttachShader(program, vertShader)
 	gl.AttachShader(program, fragShader)

@@ -3,77 +3,94 @@ package main
 import (
 	"StudyOpenGL/utils"
 	"fmt"
+	"github.com/go-gl/gl/v3.3-core/gl"
+	"github.com/go-gl/glfw/v3.3/glfw"
+	"github.com/go-gl/mathgl/mgl32"
 	"go/build"
 	"image"
 	"image/draw"
 	_ "image/png"
 	"log"
 	"os"
-	"runtime"
-	"strings"
-
-	"github.com/go-gl/gl/v3.3-core/gl"
-	"github.com/go-gl/glfw/v3.3/glfw"
-	"github.com/go-gl/mathgl/mgl32"
 )
 
-const windowWidth = 800
-const windowHeight = 600
+const (
+	WindowWidth  = 800
+	WindowHeight = 600
+)
+
+var keys = make(map[int]bool, 1024)
+var camera utils.Camera
+var firstMouse = true
+var lastX float64
+var lastY float64
+var lastTime float64
 
 func init() {
 	// 锁定线程是为了GLFW更稳定的运行
-	runtime.LockOSThread()
+	//runtime.LockOSThread()
 }
 
 func main() {
 	// GLFW初始化
 	if err := glfw.Init(); err != nil {
-		log.Fatalln("failed to initialize glfw:", err)
+		log.Fatalln("GLFW初始化失败:", err)
 	}
 	// 延迟关闭GLFW
 	defer glfw.Terminate()
-
 	// GLFW初始化
 	glfw.WindowHint(glfw.Resizable, glfw.False)                 //窗口伸缩
 	glfw.WindowHint(glfw.ContextVersionMajor, 3)                //OpenGL大版本
 	glfw.WindowHint(glfw.ContextVersionMinor, 3)                //OpenGL小版本
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile) //使用OpenGL的核心模式
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
-	window, err := glfw.CreateWindow(windowWidth, windowHeight, "Cube", nil, nil)
+	glfw.WindowHint(glfw.Samples, 4) //抗锯齿采样 4
+	window, err := glfw.CreateWindow(WindowWidth, WindowHeight, "Cube", nil, nil)
 	if err != nil {
 		panic(err)
 	}
+	//绑定上下文
 	window.MakeContextCurrent()
+	//注册事件
+	window.SetKeyCallback(keyCallBack)
+	window.SetCursorPosCallback(mouseCallBack)
+	window.SetScrollCallback(scrollCallBack)
+	//禁用指针
+	window.SetInputMode(glfw.CursorMode, glfw.CursorDisabled)
 
-	// Initialize Glow
-	if err := gl.Init(); err != nil {
+	// GL初始化
+	if err = gl.Init(); err != nil {
 		panic(err)
+	} else {
+		version := gl.GoStr(gl.GetString(gl.VERSION))
+		fmt.Println("OpenGL版本：", version[0:5])
+		fmt.Println("Nvidia版本：", version[13:])
 	}
 
-	version := gl.GoStr(gl.GetString(gl.VERSION))
-	fmt.Println("OpenGL version", version)
-
-	// Configure the vertex and fragment shaders
-
+	//默认着色器（顶点+片元）
 	var shader = &utils.CommonShader{
 		FragPath: "glsl/shader.frag",
 		VertPath: "glsl/shader.vert",
 	}
-	print(shader)
-	program, err := shader.BuildProgram()
+	program, err := shader.BuildProgram() //构建着色器
 	if err != nil {
 		panic(err)
 	}
+	gl.UseProgram(program) //使用着色器，以便后续VBO的使用
 
-	gl.UseProgram(program)
+	//camera = utils.NewCamera(mgl32.Vec3{0, 0, 3}, mgl32.Vec3{0, 1, 0}, -90.0, 0, 10.0, 0.2, 45.0)
+	camera = utils.NewCamera(mgl32.Vec3{0, 0, 10}, mgl32.Vec3{0, 1, 0}, -90.0, 0)
+	viewUniform := gl.GetUniformLocation(program, gl.Str("view\x00"))
+	view := camera.GetViewMatrix()
+	gl.UniformMatrix4fv(viewUniform, 1, false, &view[0])
 
-	projection := mgl32.Perspective(mgl32.DegToRad(45.0), float32(windowWidth)/windowHeight, 0.1, 10.0)
+	//投影矩阵，
+	//projection := mgl32.Perspective(45.0, windowWidth/windowHeight, 0.1, 100.0)
+	projection := camera.GetPerspective(WindowWidth / WindowHeight)
 	projectionUniform := gl.GetUniformLocation(program, gl.Str("projection\x00"))
 	gl.UniformMatrix4fv(projectionUniform, 1, false, &projection[0])
 
-	camera := mgl32.LookAtV(mgl32.Vec3{3, 3, 3}, mgl32.Vec3{0, 0, 0}, mgl32.Vec3{0, 1, 0})
-	cameraUniform := gl.GetUniformLocation(program, gl.Str("camera\x00"))
-	gl.UniformMatrix4fv(cameraUniform, 1, false, &camera[0])
+	//camera := mgl32.LookAtV(mgl32.Vec3{3, 3, 3}, mgl32.Vec3{0, 0, 0}, mgl32.Vec3{0, 1, 0})
 
 	model := mgl32.Ident4()
 	modelUniform := gl.GetUniformLocation(program, gl.Str("model\x00"))
@@ -104,13 +121,15 @@ func main() {
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(cubeVertices)*4, gl.Ptr(cubeVertices), gl.STATIC_DRAW)
 
-	vertAttrib := uint32(gl.GetAttribLocation(program, gl.Str("vert\x00")))
-	gl.EnableVertexAttribArray(vertAttrib)
-	gl.VertexAttribPointerWithOffset(vertAttrib, 3, gl.FLOAT, false, 5*4, 0)
+	//vertAttrib := uint32(gl.GetAttribLocation(program, gl.Str("vert\x00")))
+	//gl.EnableVertexAttribArray(vertAttrib)
+	gl.EnableVertexAttribArray(0)
+	gl.VertexAttribPointerWithOffset(0, 3, gl.FLOAT, false, 5*4, 0)
 
-	texCoordAttrib := uint32(gl.GetAttribLocation(program, gl.Str("vertTexCoord\x00")))
-	gl.EnableVertexAttribArray(texCoordAttrib)
-	gl.VertexAttribPointerWithOffset(texCoordAttrib, 2, gl.FLOAT, false, 5*4, 3*4)
+	//texCoordAttrib := uint32(gl.GetAttribLocation(program, gl.Str("vertTexCoord\x00")))
+	//gl.EnableVertexAttribArray(texCoordAttrib)
+	gl.EnableVertexAttribArray(1)
+	gl.VertexAttribPointerWithOffset(1, 2, gl.FLOAT, false, 5*4, 3*4)
 
 	// Configure global settings
 	gl.Enable(gl.DEPTH_TEST)
@@ -118,21 +137,30 @@ func main() {
 	gl.ClearColor(1.0, 1.0, 1.0, 1.0)
 
 	angle := 0.0
-	previousTime := glfw.GetTime()
+	lastTime = glfw.GetTime()
 
 	for !window.ShouldClose() {
-		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		// Update
-		time := glfw.GetTime()
-		elapsed := time - previousTime
-		previousTime = time
+		now := glfw.GetTime()
+		deltaTime := now - lastTime
+		lastTime = now
 
-		angle += elapsed
+		DoMovement(deltaTime)
+
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+		gl.UseProgram(program)
+		view := camera.GetViewMatrix()
+
+		perspective := camera.GetPerspective(WindowWidth / WindowHeight)
+
+		//angle += deltaTime
 		model = mgl32.HomogRotate3D(float32(angle), mgl32.Vec3{0, 1, 0})
 
 		// Render
-		gl.UseProgram(program)
+		gl.UniformMatrix4fv(viewUniform, 1, false, &view[0])
+		gl.UniformMatrix4fv(projectionUniform, 1, false, &perspective[0])
 		gl.UniformMatrix4fv(modelUniform, 1, false, &model[0])
 
 		gl.BindVertexArray(vao)
@@ -146,64 +174,6 @@ func main() {
 		window.SwapBuffers()
 		glfw.PollEvents()
 	}
-}
-
-func newProgram(vertexShaderSource, fragmentShaderSource string) (uint32, error) {
-	vertexShader, err := compileShader(vertexShaderSource, gl.VERTEX_SHADER)
-	if err != nil {
-		return 0, err
-	}
-
-	fragmentShader, err := compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER)
-	if err != nil {
-		return 0, err
-	}
-
-	program := gl.CreateProgram()
-
-	gl.AttachShader(program, vertexShader)
-	gl.AttachShader(program, fragmentShader)
-	gl.LinkProgram(program)
-
-	var status int32
-	gl.GetProgramiv(program, gl.LINK_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetProgramInfoLog(program, logLength, nil, gl.Str(log))
-
-		return 0, fmt.Errorf("failed to link program: %v", log)
-	}
-
-	gl.DeleteShader(vertexShader)
-	gl.DeleteShader(fragmentShader)
-
-	return program, nil
-}
-
-func compileShader(source string, shaderType uint32) (uint32, error) {
-	shader := gl.CreateShader(shaderType)
-
-	csources, free := gl.Strs(source)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
-	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
-		return 0, fmt.Errorf("failed to compile %v: %v", source, log)
-	}
-
-	return shader, nil
 }
 
 func newTexture(file string) (uint32, error) {
@@ -220,7 +190,7 @@ func newTexture(file string) (uint32, error) {
 	if rgba.Stride != rgba.Rect.Size().X*4 {
 		return 0, fmt.Errorf("unsupported stride")
 	}
-	draw.Draw(rgba, rgba.Bounds(), img, image.Point{0, 0}, draw.Src)
+	draw.Draw(rgba, rgba.Bounds(), img, image.Point{}, draw.Src)
 
 	var texture uint32
 	gl.GenTextures(1, &texture)
@@ -243,38 +213,6 @@ func newTexture(file string) (uint32, error) {
 
 	return texture, nil
 }
-
-var vertexShader = `
-#version 330
-
-uniform mat4 projection;
-uniform mat4 camera;
-uniform mat4 model;
-
-in vec3 vert;
-in vec2 vertTexCoord;
-
-out vec2 fragTexCoord;
-
-void main() {
-    fragTexCoord = vertTexCoord;
-    gl_Position = projection * camera * model * vec4(vert, 1);
-}
-` + "\x00"
-
-var fragmentShader = `
-#version 330
-
-uniform sampler2D tex;
-
-in vec2 fragTexCoord;
-
-out vec4 outputColor;
-
-void main() {
-    outputColor = texture(tex, fragTexCoord);
-}
-` + "\x00"
 
 var cubeVertices = []float32{
 	//  X, Y, Z, U, V
@@ -336,4 +274,56 @@ func importPathToDir(importPath string) (string, error) {
 		return "", err
 	}
 	return p.Dir, nil
+}
+
+func keyCallBack(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+	// ESC键被被按下
+	if key == glfw.KeyEscape && action == glfw.Press {
+		w.SetShouldClose(true)
+	}
+	// 缓存按键被按下
+	if key >= 0 && key <= 1024 {
+		if action == glfw.Press {
+			keys[int(key)] = true
+		}
+		if action == glfw.Release {
+			keys[int(key)] = false
+		}
+	}
+}
+
+func mouseCallBack(w *glfw.Window, xPos float64, yPos float64) {
+	//第一次移动时进行更新
+	if firstMouse {
+		lastX, lastY, firstMouse = xPos, xPos, false
+	}
+	xOffSet := xPos - lastX
+	yOffSet := lastY - yPos
+	lastX, lastY = xPos, yPos
+	//获得两次的差值，并提交给camera进行更新
+	camera.ProcessMouseMovement(xOffSet, yOffSet, true)
+	//更新last值
+
+}
+
+func scrollCallBack(w *glfw.Window, xOff float64, yOff float64) {
+	//xOff表示鼠标横向滚动，大部分鼠标都只有竖向滚轮
+	//将yOff传输给缩放
+	camera.ProcessMouseScroll(yOff)
+	//print(camera.Zoom)
+}
+
+func DoMovement(deltaTime float64) {
+	if keys[int(glfw.KeyW)] {
+		camera.ProcessKeyboard(utils.FORWARD, deltaTime)
+	}
+	if keys[int(glfw.KeyS)] {
+		camera.ProcessKeyboard(utils.BACKWARD, deltaTime)
+	}
+	if keys[int(glfw.KeyA)] {
+		camera.ProcessKeyboard(utils.LEFT, deltaTime)
+	}
+	if keys[int(glfw.KeyD)] {
+		camera.ProcessKeyboard(utils.RIGHT, deltaTime)
+	}
 }
