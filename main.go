@@ -138,11 +138,14 @@ func main() {
 
 	angle := 0.0
 	lastTime = glfw.GetTime()
-
+	fps := utils.NewFps(lastTime)
 	for !window.ShouldClose() {
 
 		// Update
 		now := glfw.GetTime()
+		if ok, f := fps.Get(now); ok {
+			println(f)
+		}
 		deltaTime := now - lastTime
 		lastTime = now
 
