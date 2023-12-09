@@ -79,11 +79,35 @@ func (g Geometry) NewGeometry(data map[int]map[string]interface{}) interface{} {
 	}
 }
 
-// IntersectionPoint 与射线求交点
-func (g Geometry) IntersectionPoint(r Ray, Geo interface{}) {
+// Intersection 与射线求交点
+func (g Geometry) Intersection(r Ray, Geo interface{}) {
 	switch g.Type {
 	case SPHERE: //射线与球壳求交
-		//sphere := Geo.(Sphere)
-		//print(sphere)
+
+		sphere, ok := Geo.(Sphere)
+		if !ok {
+			return
+		} else {
+			// 解法一（速度较慢）：射线方程 p' = p + t * dir ，表示t时刻位置，
+			// 与球壳方程联立，解一元二次方程，将t用求根公式表示
+			// r.Direction
+			// 解法二（优化流程），先判读可不可能出现交点，部分情况可以直接退出计算
+
+		}
+
 	}
+}
+
+func IntersectionWithSphere(ray Ray, sphere Sphere) {
+	// 先判断是否在出射点是否在球内
+	rayToSphere := sphere.Center.Sub(ray.Direction)
+	rayToSphereDis := rayToSphere.Len() //出射点到球心距离
+	if float64(rayToSphereDis) < sphere.Radio {
+		//在球内必有交点
+	} else {
+		//在球外
+		rayToSphereNor := rayToSphere.Normalize()
+		rayToSphereNor.Cross()
+	}
+	// 求射线方向和出射点到球心的单位向量的夹角余弦
 }
