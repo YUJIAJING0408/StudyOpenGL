@@ -11,7 +11,6 @@ import (
 	"image/draw"
 	_ "image/png"
 	"log"
-	"math"
 	"os"
 	"runtime"
 )
@@ -28,22 +27,12 @@ var lastX float64
 var lastY float64
 var lastTime float64
 
+// 初始化项目
 func init() {
 	// 锁定线程是为了GLFW更稳定的运行
 	runtime.LockOSThread()
-	//println(utils.DeIntCalc(utils.Function, 0, 1))
-	// mc测试
-	var mc = &utils.MCF{
-		Function: func(x float64) float64 {
-			return math.Sqrt(1-math.Pow(x, 2)) * 4
-		},
-		AreaLeft:    0.0,
-		AreaRight:   1.0,
-		Integration: 0,
-		Time:        10000,
-	}
-	mc.DeIntCalc()
-	fmt.Printf("%0.5f\n", mc.Integration)
+	//utils.TestingMC()
+
 }
 
 func main() {
