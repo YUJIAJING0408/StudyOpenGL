@@ -11,7 +11,9 @@ import (
 	"image/draw"
 	_ "image/png"
 	"log"
+	"math"
 	"os"
+	"runtime"
 )
 
 const (
@@ -28,7 +30,20 @@ var lastTime float64
 
 func init() {
 	// 锁定线程是为了GLFW更稳定的运行
-	//runtime.LockOSThread()
+	runtime.LockOSThread()
+	//println(utils.DeIntCalc(utils.Function, 0, 1))
+	// mc测试
+	var mc = &utils.MCF{
+		Function: func(x float64) float64 {
+			return math.Sqrt(1-math.Pow(x, 2)) * 4
+		},
+		AreaLeft:    0.0,
+		AreaRight:   1.0,
+		Integration: 0,
+		Time:        10000,
+	}
+	mc.DeIntCalc()
+	fmt.Printf("%0.5f\n", mc.Integration)
 }
 
 func main() {
@@ -51,6 +66,7 @@ func main() {
 	}
 	//绑定上下文
 	window.MakeContextCurrent()
+	glfw.SwapInterval(1)
 	//注册事件
 	window.SetKeyCallback(keyCallBack)
 	window.SetCursorPosCallback(mouseCallBack)
@@ -66,6 +82,9 @@ func main() {
 		fmt.Println("OpenGL版本：", version[0:5])
 		fmt.Println("Nvidia版本：", version[13:])
 	}
+
+	gl.Enable(gl.DEPTH_TEST)
+	gl.DepthFunc(gl.LESS)
 
 	//默认着色器（顶点+片元）
 	var shader = &utils.CommonShader{
@@ -134,7 +153,7 @@ func main() {
 	// Configure global settings
 	gl.Enable(gl.DEPTH_TEST)
 	gl.DepthFunc(gl.LESS)
-	gl.ClearColor(1.0, 1.0, 1.0, 1.0)
+	gl.ClearColor(0.5, 0.5, 0.5, 1.0)
 
 	angle := 0.0
 	lastTime = glfw.GetTime()
@@ -144,7 +163,7 @@ func main() {
 		// Update
 		now := glfw.GetTime()
 		if ok, f := fps.Get(now); ok {
-			println(f)
+			fmt.Printf("当前帧数为：%d\n", f) //输出
 		}
 		deltaTime := now - lastTime
 		lastTime = now

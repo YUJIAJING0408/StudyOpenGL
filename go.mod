@@ -11,4 +11,5 @@ require (
 //github.com/raedatoui/assimp v0.0.0-20190122210933-1ba60cf453f0 // indirect
 //github.com/raedatoui/glfont v0.0.0-20170222065528-7836ad146bb6 // indirect
 //github.com/raedatoui/glutils v0.0.0-20180204223817-7cd8d44edb49 // indirect
-require golang.org/x/image v0.0.0-20190321063152-3fc05d484e9f // indirect
+//require golang.org/x/image v0.3.0 // indirect
+require golang.org/x/image v0.14.0 // indirect
