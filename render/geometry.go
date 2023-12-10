@@ -2,6 +2,7 @@ package render
 
 import (
 	"github.com/go-gl/mathgl/mgl32"
+	"math"
 )
 
 const (
@@ -80,10 +81,9 @@ func (g Geometry) NewGeometry(data map[int]map[string]interface{}) interface{} {
 }
 
 // Intersection 与射线求交点
-func (g Geometry) Intersection(r Ray, Geo interface{}) {
+func (g Geometry) Intersection(r Ray, Geo interface{}) (flag bool, point mgl32.Vec3) {
 	switch g.Type {
 	case SPHERE: //射线与球壳求交
-
 		sphere, ok := Geo.(Sphere)
 		if !ok {
 			return
@@ -92,22 +92,51 @@ func (g Geometry) Intersection(r Ray, Geo interface{}) {
 			// 与球壳方程联立，解一元二次方程，将t用求根公式表示
 			// r.Direction
 			// 解法二（优化流程），先判读可不可能出现交点，部分情况可以直接退出计算
+			flag, point = intersectionWithSphere(r, sphere)
+		}
+	case POINT:
+		flag = false
+	}
+	return flag, point
+}
 
+func intersectionWithSphere(ray Ray, sphere Sphere) (isIntersection bool, crossoverPoint mgl32.Vec3) {
+	isIntersection = true
+	// 先判断是否在出射点是否在球内
+	rayToSphere := sphere.Center.Sub(ray.Position)
+	rayCenterToSphereLen := rayToSphere.Len() //出射点到球心距离
+	projectOnRayDot := rayToSphere.Dot(ray.Direction)
+	projectOnRayLenAbs := math.Abs(float64(projectOnRayDot)) // 投影长度
+	if float64(rayCenterToSphereLen) < sphere.Radio {
+		//在球内必有交点
+		acrossFlats := math.Sqrt(math.Pow(float64(rayCenterToSphereLen), 2) - math.Pow(projectOnRayLenAbs, 2.0)) //夹角的对边
+		path := math.Sqrt(math.Pow(sphere.Radio, 2) - math.Pow(acrossFlats, 2))                                  //球内平面圆通过垂径定理构建直角三角形的临边
+		if projectOnRayDot > 0 {
+			rayTouchSphereLen := projectOnRayLenAbs + path                                   //等价时间t
+			crossoverPoint = ray.Position.Add(ray.Direction.Mul(float32(rayTouchSphereLen))) //p' = p + t * dir
+		} else if projectOnRayDot == 0 {
+			crossoverPoint = ray.Position.Add(ray.Direction.Mul(float32(sphere.Radio)))
+		} else {
+			rayTouchSphereLen := path - projectOnRayLenAbs //等价时间t
+			crossoverPoint = ray.Position.Add(ray.Direction.Mul(float32(rayTouchSphereLen)))
+		}
+	} else {
+		//在球外
+		//rayToSphereNor := rayToSphere.Normalize()
+		//投影大于0说明夹角为锐角，小于0时不存在交点
+		//x in (0,90) => cos(x) > 0
+		//x in (90,180) => cos(x) < 0
+		// 先求中垂线长度，勾股定理
+		acrossFlats := math.Sqrt(math.Pow(float64(rayCenterToSphereLen), 2) - math.Pow(projectOnRayLenAbs, 2.0)) //夹角的对边
+		path := math.Sqrt(math.Pow(sphere.Radio, 2) - math.Pow(acrossFlats, 2))                                  //球内平面圆通过垂径定理构建直角三角形的临边
+		if projectOnRayDot > 0 && acrossFlats < sphere.Radio {
+			//有且仅有这一种情况，夹角对边的长度小于球壳半径 且投影大于0
+			rayTouchSphereLen := projectOnRayLenAbs - path                                   //等价时间t
+			crossoverPoint = ray.Position.Add(ray.Direction.Mul(float32(rayTouchSphereLen))) //p' = p + t * dir
+		} else {
+			isIntersection = false
 		}
 
 	}
-}
-
-func IntersectionWithSphere(ray Ray, sphere Sphere) {
-	// 先判断是否在出射点是否在球内
-	rayToSphere := sphere.Center.Sub(ray.Direction)
-	rayToSphereDis := rayToSphere.Len() //出射点到球心距离
-	if float64(rayToSphereDis) < sphere.Radio {
-		//在球内必有交点
-	} else {
-		//在球外
-		rayToSphereNor := rayToSphere.Normalize()
-		rayToSphereNor.Cross()
-	}
-	// 求射线方向和出射点到球心的单位向量的夹角余弦
+	return isIntersection, crossoverPoint
 }
