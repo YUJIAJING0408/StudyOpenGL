@@ -5,18 +5,22 @@ import (
 	"math"
 )
 
+const GEOMETRYTYPE = 5 //
+
 const (
 	SPHERE = iota
 	BOX
 	CUBE
 	POINT
 	//其他几何体
+	OTHERS
 )
 
 // Geometry 几何体
 type Geometry struct {
+	Mat  Material //材质
 	Type int
-	Name string
+	Id   int // 不许是负数
 }
 
 // Sphere 球体（球壳）
@@ -46,6 +50,12 @@ type Cube struct {
 type Point struct {
 	Geometry
 	Center mgl32.Vec3 //等价Position
+}
+
+// Other 其他几何体
+type Other struct {
+	Center mgl32.Vec3
+	//？？其他属性
 }
 
 // NewGeometry 构造几何体 传入数据data为多重map，外层map的key为几何体类型int，内层为另一个map[string]interface{}
@@ -92,7 +102,7 @@ func (g Geometry) Intersection(r Ray, Geo interface{}) (flag bool, point mgl32.V
 			// 与球壳方程联立，解一元二次方程，将t用求根公式表示
 			// r.Direction
 			// 解法二（优化流程），先判读可不可能出现交点，部分情况可以直接退出计算
-			flag, point = intersectionWithSphere(r, sphere)
+			flag, point, _, _ = IntersectionWithSphere(r, sphere)
 		}
 	case POINT:
 		flag = false
@@ -100,7 +110,7 @@ func (g Geometry) Intersection(r Ray, Geo interface{}) (flag bool, point mgl32.V
 	return flag, point
 }
 
-func intersectionWithSphere(ray Ray, sphere Sphere) (isIntersection bool, crossoverPoint mgl32.Vec3) {
+func IntersectionWithSphere(ray Ray, sphere Sphere) (isIntersection bool, hitPoint, hitNorm mgl32.Vec3, rayTouchSphereLen float64) {
 	isIntersection = true
 	// 先判断是否在出射点是否在球内
 	rayToSphere := sphere.Center.Sub(ray.Position)
@@ -112,13 +122,13 @@ func intersectionWithSphere(ray Ray, sphere Sphere) (isIntersection bool, crosso
 		acrossFlats := math.Sqrt(math.Pow(float64(rayCenterToSphereLen), 2) - math.Pow(projectOnRayLenAbs, 2.0)) //夹角的对边
 		path := math.Sqrt(math.Pow(sphere.Radio, 2) - math.Pow(acrossFlats, 2))                                  //球内平面圆通过垂径定理构建直角三角形的临边
 		if projectOnRayDot > 0 {
-			rayTouchSphereLen := projectOnRayLenAbs + path                                   //等价时间t
-			crossoverPoint = ray.Position.Add(ray.Direction.Mul(float32(rayTouchSphereLen))) //p' = p + t * dir
+			rayTouchSphereLen = projectOnRayLenAbs + path                              //等价时间t
+			hitPoint = ray.Position.Add(ray.Direction.Mul(float32(rayTouchSphereLen))) //p' = p + t * dir
 		} else if projectOnRayDot == 0 {
-			crossoverPoint = ray.Position.Add(ray.Direction.Mul(float32(sphere.Radio)))
+			hitPoint = ray.Position.Add(ray.Direction.Mul(float32(sphere.Radio)))
 		} else {
-			rayTouchSphereLen := path - projectOnRayLenAbs //等价时间t
-			crossoverPoint = ray.Position.Add(ray.Direction.Mul(float32(rayTouchSphereLen)))
+			rayTouchSphereLen = path - projectOnRayLenAbs //等价时间t
+			hitPoint = ray.Position.Add(ray.Direction.Mul(float32(rayTouchSphereLen)))
 		}
 	} else {
 		//在球外
@@ -131,12 +141,14 @@ func intersectionWithSphere(ray Ray, sphere Sphere) (isIntersection bool, crosso
 		path := math.Sqrt(math.Pow(sphere.Radio, 2) - math.Pow(acrossFlats, 2))                                  //球内平面圆通过垂径定理构建直角三角形的临边
 		if projectOnRayDot > 0 && acrossFlats < sphere.Radio {
 			//有且仅有这一种情况，夹角对边的长度小于球壳半径 且投影大于0
-			rayTouchSphereLen := projectOnRayLenAbs - path                                   //等价时间t
-			crossoverPoint = ray.Position.Add(ray.Direction.Mul(float32(rayTouchSphereLen))) //p' = p + t * dir
+			rayTouchSphereLen = projectOnRayLenAbs - path                              //等价时间t
+			hitPoint = ray.Position.Add(ray.Direction.Mul(float32(rayTouchSphereLen))) //p' = p + t * dir
 		} else {
 			isIntersection = false
 		}
-
 	}
-	return isIntersection, crossoverPoint
+	if isIntersection {
+		hitNorm = hitPoint.Sub(sphere.Center).Normalize() //碰撞点法线
+	}
+	return isIntersection, hitPoint, hitNorm, rayTouchSphereLen
 }

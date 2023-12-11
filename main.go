@@ -1,6 +1,7 @@
 package main
 
 import (
+	"StudyOpenGL/render"
 	"StudyOpenGL/utils"
 	"fmt"
 	"github.com/go-gl/gl/v3.3-core/gl"
@@ -21,7 +22,7 @@ const (
 )
 
 var keys = make(map[int]bool, 1024)
-var camera utils.Camera
+var camera render.Camera
 var firstMouse = true
 var lastX float64
 var lastY float64
@@ -87,7 +88,7 @@ func main() {
 	gl.UseProgram(program) //使用着色器，以便后续VBO的使用
 
 	//camera = utils.NewCamera(mgl32.Vec3{0, 0, 3}, mgl32.Vec3{0, 1, 0}, -90.0, 0, 10.0, 0.2, 45.0)
-	camera = utils.NewCamera(mgl32.Vec3{0, 0, 10}, mgl32.Vec3{0, 1, 0}, -90.0, 0)
+	camera = render.NewCamera(mgl32.Vec3{0, 0, 10}, mgl32.Vec3{0, 1, 0}, -90.0, 0)
 	viewUniform := gl.GetUniformLocation(program, gl.Str("view\x00"))
 	view := camera.GetViewMatrix()
 	gl.UniformMatrix4fv(viewUniform, 1, false, &view[0])

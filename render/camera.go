@@ -1,4 +1,4 @@
-package utils
+package render
 
 import (
 	"fmt"
@@ -130,4 +130,10 @@ func (c *Camera) UpdateCameraVectors() {
 	c.Front = front.Normalize()
 	c.Right = front.Cross(c.WorldUp).Normalize()
 	c.Up = c.Right.Cross(c.Front).Normalize()
+}
+
+func (c *Camera) GetRay(viewX, viewY, fov float64) (r Ray) {
+	r.Direction = c.Front.Add(c.Right.Mul(float32(2*(viewX+0.5)/fov - 1))).Add(c.Up.Mul(float32(2*(viewY+0.5)/fov - 1))).Sub(c.Position)
+	r.Position = c.Position
+	return r
 }

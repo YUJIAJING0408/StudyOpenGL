@@ -15,6 +15,6 @@ func NewRay(pos, dir mgl32.Vec3) *Ray {
 	}
 }
 
-func (r *Ray) Shoot() {
+func (r *Ray) GetRay() {
 
 }
