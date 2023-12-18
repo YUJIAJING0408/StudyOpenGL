@@ -72,6 +72,7 @@ func (s Scene) AddLight(lightType int, light interface{}) {
 
 func (s Scene) AddGeometry(geometryType int, geo interface{}) {
 	switch geometryType {
+	//构建几何数据
 	case SPHERE:
 		s.GeoData[geometryType] = append(s.GeoData[geometryType].([]Sphere), geo.(Sphere))
 	case CUBE:
@@ -90,11 +91,11 @@ func (s Scene) SceneIntersect(ray Ray) (isHit bool, hitGeoId int, hitPos, hitNor
 	if s.GeoCount <= 0 {
 		// 场景没有物体直接返回
 		return
-	}
+	} //如果没有几何体直接返回
 	var closerPoint, closerHitNorm mgl32.Vec3
 	var closerGeoId = -1
 	var closerLen float64 = 10000000000.0
-
+	//遍历每个几何体数据
 	for _, sphere := range s.GeoData[SPHERE].([]Sphere) {
 		if isIntersection, point, hitNormal, length := IntersectionWithSphere(ray, sphere); isIntersection {
 			if !isHit {

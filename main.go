@@ -327,15 +327,15 @@ func scrollCallBack(w *glfw.Window, xOff float64, yOff float64) {
 
 func DoMovement(deltaTime float64) {
 	if keys[int(glfw.KeyW)] {
-		camera.ProcessKeyboard(utils.FORWARD, deltaTime)
+		camera.ProcessKeyboard(render.FORWARD, deltaTime)
 	}
 	if keys[int(glfw.KeyS)] {
-		camera.ProcessKeyboard(utils.BACKWARD, deltaTime)
+		camera.ProcessKeyboard(render.BACKWARD, deltaTime)
 	}
 	if keys[int(glfw.KeyA)] {
-		camera.ProcessKeyboard(utils.LEFT, deltaTime)
+		camera.ProcessKeyboard(render.LEFT, deltaTime)
 	}
 	if keys[int(glfw.KeyD)] {
-		camera.ProcessKeyboard(utils.RIGHT, deltaTime)
+		camera.ProcessKeyboard(render.RIGHT, deltaTime)
 	}
 }
