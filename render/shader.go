@@ -1,6 +1,7 @@
-package utils
+package render
 
 import (
+	"StudyOpenGL/utils"
 	"fmt"
 	"github.com/go-gl/gl/v3.3-core/gl"
 	"os"
@@ -17,7 +18,7 @@ func (cs CommonShader) BuildProgram() (program uint32, err error) {
 		vertShader uint32
 		fragShader uint32
 	)
-	fullVertPath, err := Relative2FullPath(cs.VertPath)
+	fullVertPath, err := utils.Relative2FullPath(cs.VertPath)
 	if err != nil {
 		return 0, err
 	}
@@ -28,7 +29,7 @@ func (cs CommonShader) BuildProgram() (program uint32, err error) {
 			return 0, err
 		}
 	}
-	fullFragPath, err := Relative2FullPath(cs.FragPath)
+	fullFragPath, err := utils.Relative2FullPath(cs.FragPath)
 	if err != nil {
 		return 0, err
 	}

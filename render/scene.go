@@ -1,6 +1,7 @@
 package render
 
 import (
+	"github.com/chewxy/math32"
 	"github.com/go-gl/mathgl/mgl32"
 	"math"
 )
@@ -67,6 +68,8 @@ func (s Scene) AddLight(lightType int, light interface{}) {
 		s.LightData[lightType] = append(s.LightData[lightType].([]ParallelLight), light.(ParallelLight))
 	case FACELIGHT:
 		s.LightData[lightType] = append(s.LightData[lightType].([]FaceLight), light.(FaceLight))
+	default:
+		panic("unhandled default case")
 	}
 }
 
@@ -94,7 +97,7 @@ func (s Scene) SceneIntersect(ray Ray) (isHit bool, hitGeoId int, hitPos, hitNor
 	} //如果没有几何体直接返回
 	var closerPoint, closerHitNorm mgl32.Vec3
 	var closerGeoId = -1
-	var closerLen float64 = 10000000000.0
+	var closerLen float32 = 10000000000.0
 	//遍历每个几何体数据
 	for _, sphere := range s.GeoData[SPHERE].([]Sphere) {
 		if isIntersection, point, hitNormal, length := IntersectionWithSphere(ray, sphere); isIntersection {
@@ -172,8 +175,8 @@ func (s Scene) Trace(ray Ray, depth int) (c mgl32.Vec3) {
 				viewDir := ray.Position.Sub(hitPos)
 				reflectDir := Reflect(light.Direction.Mul(-1.0), hitNorm)
 				if delta := viewDir.Dot(reflectDir); delta > 0 {
-					specular := math.Pow(float64(delta), hitMat.Shininess)
-					color = color.Mul(float32(1 + specular))
+					specular := math32.Pow(delta, hitMat.Shininess)
+					color = color.Mul(1 + specular)
 				}
 			}
 		}
@@ -191,20 +194,20 @@ func (s Scene) Trace(ray Ray, depth int) (c mgl32.Vec3) {
 	// 使用菲涅尔方程的shlick近似方程计算反射光线颜色
 	var cs mgl32.Vec3
 	cosTheta := -ray.Direction.Dot(hitNorm)
-	r0 := 0.0
+	var r0 float32 = 0.0
 	if hitMat.Type == REFLECTIVE {
 		cs = hitMat.Color
 	} else if hitMat.Type == REFRACTIVE {
-		r0 = math.Pow((hitMat.RefractiveIndex-1)/(hitMat.RefractiveIndex+1), 2)
-		R0 := mgl32.Vec3{float32(r0), float32(r0), float32(r0)}
+		r0 = math32.Pow((hitMat.RefractiveIndex-1)/(hitMat.RefractiveIndex+1), 2)
+		R0 := mgl32.Vec3{r0, r0, r0}
 		cs = R0.Add(mgl32.Vec3{1.0, 1.0, 1.0}.Sub(R0).Mul(float32(math.Pow(float64(1.0-cosTheta), 5.0))))
 	}
 	// 递归调用光追，直到最大深度
 	color = cs.Cross(s.Trace(reflectRay, depth+1))
 	if hitSphere.Mat.Type == REFRACTIVE {
-		cos2Phi := 1 - (1-math.Pow(float64(cosTheta), 2))/math.Pow(hitMat.RefractiveIndex, 2)
+		cos2Phi := 1 - (1-math32.Pow(cosTheta, 2))/math32.Pow(hitMat.RefractiveIndex, 2)
 		if cos2Phi >= 0 {
-			reflectDir = ray.Direction.Sub(hitNorm.Mul(ray.Direction.Dot(hitNorm))).Mul(float32(1 / hitMat.RefractiveIndex)).Sub(hitNorm.Mul(float32(math.Sqrt(cos2Phi))))
+			reflectDir = ray.Direction.Sub(hitNorm.Mul(ray.Direction.Dot(hitNorm))).Mul(1 / hitMat.RefractiveIndex).Sub(hitNorm.Mul(math32.Sqrt(cos2Phi)))
 			reflectRay = Ray{
 				Position:  hitPos.Add(reflectDir.Mul(-EPSILON)),
 				Direction: reflectDir.Normalize(),
@@ -216,29 +219,41 @@ func (s Scene) Trace(ray Ray, depth int) (c mgl32.Vec3) {
 }
 
 // RenderScene 对整个场景进行光追
-func (s Scene) RenderScene(viewWidth, viewHeight float64, function func(float64, float64, mgl32.Vec3)) {
+func (s Scene) RenderScene(viewWidth, viewHeight float32, function func(float32, float32, mgl32.Vec3) []float32) {
 	fov := max(viewWidth, viewHeight)
-	for viewX := 0.0; viewX < fov; viewX++ {
+	for viewX := float32(0.0); viewX < fov; viewX++ {
 		var cameraCoord mgl32.Vec2
 		var pixelColor mgl32.Vec3
-		for viewY := 0.0; viewY < fov; viewY++ {
+		for viewY := float32(0.0); viewY < fov; viewY++ {
 			viewRay := s.Camera.GetRay(viewX, viewY, fov)
 			pixelColor = s.Trace(viewRay, 0)
 			// 计算视野中各像素点的位置，并调用函数renderFunc将像素点的坐标及颜色插入主程序的端点向量中
-			cameraCoord = mgl32.Vec2{1, 0}.Mul(float32(2.0*(viewX+0.5)/fov - 1.0)).Add(mgl32.Vec2{0, 1}.Mul(float32(2.0*(viewY+0.5)/fov - 1.0)))
+			cameraCoord = mgl32.Vec2{1, 0}.Mul(2.0*(viewX+0.5)/fov - 1.0).Add(mgl32.Vec2{0, 1}.Mul(2.0*(viewY+0.5)/fov - 1.0))
 		}
-		var renderX, renderY float64
+		var renderX, renderY float32
 		if flag := fov == viewWidth; flag {
-			renderX = float64(cameraCoord.X())
+			renderX = cameraCoord.X()
 		} else {
-			renderX = float64(cameraCoord.X()) / viewWidth * viewHeight
+			renderX = cameraCoord.X() / viewWidth * viewHeight
 		}
 		if flag := fov == viewHeight; flag {
-			renderX = float64(cameraCoord.Y())
+			renderX = cameraCoord.Y()
 		} else {
-			renderX = float64(cameraCoord.Y()) / viewHeight * viewWidth
+			renderX = cameraCoord.Y() / viewHeight * viewWidth
 		}
-		function(renderX, renderY, pixelColor)
+		vex := function(renderX, renderY, pixelColor)
+		print(vex)
 	}
 	return
+}
+
+// LoadPixels 将画面渲染到屏幕上去
+func (s Scene) LoadPixels(x float32, y float32, fragColor mgl32.Vec3) (vex []float32) {
+	vex = append(vex, x)
+	vex = append(vex, y)
+	vex = append(vex, 0.0)
+	vex = append(vex, fragColor.X())
+	vex = append(vex, fragColor.Y())
+	vex = append(vex, fragColor.Z())
+	return vex
 }

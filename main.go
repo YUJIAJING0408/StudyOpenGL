@@ -7,7 +7,6 @@ import (
 	"github.com/go-gl/gl/v3.3-core/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"github.com/go-gl/mathgl/mgl32"
-	"go/build"
 	"image"
 	"image/draw"
 	_ "image/png"
@@ -24,9 +23,9 @@ const (
 var keys = make(map[int]bool, 1024)
 var camera render.Camera
 var firstMouse = true
-var lastX float64
-var lastY float64
-var lastTime float64
+var lastX float32
+var lastY float32
+var lastTime float32
 
 // 初始化项目
 func init() {
@@ -77,7 +76,7 @@ func main() {
 	gl.DepthFunc(gl.LESS)
 
 	//默认着色器（顶点+片元）
-	var shader = &utils.CommonShader{
+	var shader = &render.CommonShader{
 		FragPath: "glsl/shader.frag",
 		VertPath: "glsl/shader.vert",
 	}
@@ -146,12 +145,14 @@ func main() {
 	gl.ClearColor(0.5, 0.5, 0.5, 1.0)
 
 	angle := 0.0
-	lastTime = glfw.GetTime()
+	lastTime = float32(glfw.GetTime())
 	fps := utils.NewFps(lastTime)
+
+	// 渲染循环
 	for !window.ShouldClose() {
 
 		// Update
-		now := glfw.GetTime()
+		now := float32(glfw.GetTime())
 		if ok, f := fps.Get(now); ok {
 			fmt.Printf("当前帧数为：%d\n", f) //输出
 		}
@@ -277,17 +278,6 @@ var cubeVertices = []float32{
 	1.0, 1.0, 1.0, 0.0, 1.0,
 }
 
-// importPathToDir resolves the absolute path from importPath.
-// There doesn't need to be a valid Go package inside that import path,
-// but the directory must exist.
-func importPathToDir(importPath string) (string, error) {
-	p, err := build.Import(importPath, "", build.FindOnly)
-	if err != nil {
-		return "", err
-	}
-	return p.Dir, nil
-}
-
 func keyCallBack(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 	// ESC键被被按下
 	if key == glfw.KeyEscape && action == glfw.Press {
@@ -304,28 +294,29 @@ func keyCallBack(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action,
 	}
 }
 
-func mouseCallBack(w *glfw.Window, xPos float64, yPos float64) {
+func mouseCallBack(w *glfw.Window, xPos, yPos float64) {
+	x, y := float32(xPos), float32(xPos)
 	//第一次移动时进行更新
 	if firstMouse {
-		lastX, lastY, firstMouse = xPos, xPos, false
+		lastX, lastY, firstMouse = x, y, false
 	}
-	xOffSet := xPos - lastX
-	yOffSet := lastY - yPos
-	lastX, lastY = xPos, yPos
+	xOffSet := x - lastX
+	yOffSet := lastY - y
+	lastX, lastY = x, y
 	//获得两次的差值，并提交给camera进行更新
 	camera.ProcessMouseMovement(xOffSet, yOffSet, true)
 	//更新last值
 
 }
 
-func scrollCallBack(w *glfw.Window, xOff float64, yOff float64) {
+func scrollCallBack(w *glfw.Window, xOff, yOff float64) {
 	//xOff表示鼠标横向滚动，大部分鼠标都只有竖向滚轮
 	//将yOff传输给缩放
-	camera.ProcessMouseScroll(yOff)
+	camera.ProcessMouseScroll(float32(yOff))
 	//print(camera.Zoom)
 }
 
-func DoMovement(deltaTime float64) {
+func DoMovement(deltaTime float32) {
 	if keys[int(glfw.KeyW)] {
 		camera.ProcessKeyboard(render.FORWARD, deltaTime)
 	}

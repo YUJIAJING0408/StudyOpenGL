@@ -14,7 +14,3 @@ func NewRay(pos, dir mgl32.Vec3) *Ray {
 		Direction: dir.Normalize(),
 	}
 }
-
-func (r *Ray) GetRay() {
-
-}

@@ -14,7 +14,7 @@ func TestNewGeometry(t *testing.T) {
 	}
 	innerMap := make(map[string]interface{}, 8) //一般参数不会大于8个的
 	innerMap["center"] = mgl32.Vec3{0, 0, 0}
-	innerMap["radio"] = 5.0
+	innerMap["radio"] = float32(5.0)
 	data[geo.Type] = innerMap
 	geometry := geo.NewGeometry(data)
 	sphere := geometry.(Sphere)
@@ -33,7 +33,7 @@ func TestIntersectionWithSphere(t *testing.T) {
 	data := make(map[int]map[string]interface{}, 8)
 	data[SPHERE] = make(map[string]interface{}, 8)
 	data[SPHERE]["center"] = mgl32.Vec3{4, 1, 0}
-	data[SPHERE]["radio"] = 2.0
+	data[SPHERE]["radio"] = float32(2.0)
 	sphere := g.NewGeometry(data).(Sphere)
 	if isIntersection, point, hitNorm, hitLen := IntersectionWithSphere(*ray1, sphere); isIntersection {
 		fmt.Printf("Ray1交点为：\nx=%0.2f\ny=%0.2f\nz=%0.2f\n交点法线为：{%0.2f,%0.2f,%0.2f}\n发射距离为：%0.2f\n", point.X(), point.Y(), point.Z(), hitNorm.X(), hitNorm.Y(), hitNorm.Z(), hitLen)

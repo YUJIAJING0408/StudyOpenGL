@@ -1,13 +1,13 @@
 package utils
 
 type Fps struct {
-	lastTime  float64
-	countTime float64
+	lastTime  float32
+	countTime float32
 	count     uint
 }
 
 // NewFps 构建一个Fps，传入当前GLFW时间
-func NewFps(lastTime float64) *Fps {
+func NewFps(lastTime float32) *Fps {
 	return &Fps{
 		lastTime:  lastTime,
 		countTime: 0.0,
@@ -34,13 +34,13 @@ func NewFps(lastTime float64) *Fps {
 //}
 
 // Get FPS计数器
-func (f *Fps) Get(currentTime float64) (ok bool, fps int) {
+func (f *Fps) Get(currentTime float32) (ok bool, fps int) {
 	//currentTime = glfw.GetTime()
 	deltaTime := currentTime - f.lastTime
 	f.countTime += deltaTime
 	if f.countTime >= 1.0 {
 		// 一秒内的计数次数除时间
-		fps = int(float64(f.count) / (currentTime - f.lastTime))
+		fps = int(float32(f.count) / (currentTime - f.lastTime))
 		// 归零
 		f.lastTime = currentTime
 		f.countTime = 0.0

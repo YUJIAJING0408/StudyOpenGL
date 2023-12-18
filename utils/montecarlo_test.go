@@ -2,20 +2,20 @@ package utils
 
 import (
 	"fmt"
-	"math"
+	"github.com/chewxy/math32"
 	"testing"
 )
 
 func TestMC(t *testing.T) {
 	// mc测试
 	var mc = &MCF{
-		Function: func(x float64) float64 {
-			return math.Sqrt(1-math.Pow(x, 2)) * 4
+		Function: func(x float32) float32 {
+			return math32.Sqrt(1-math32.Pow(x, 2)) * 4
 		},
 		AreaLeft:    0.0,
 		AreaRight:   1.0,
 		Integration: 0,
-		Time:        20000,
+		Time:        10000,
 	}
 	mc.DeIntCalc()
 	fmt.Printf("%0.5f\n", mc.Integration)

@@ -8,6 +8,8 @@ require (
 	github.com/go-gl/mathgl v1.1.0
 )
 
+require github.com/chewxy/math32 v1.10.1 // indirect
+
 //github.com/raedatoui/assimp v0.0.0-20190122210933-1ba60cf453f0 // indirect
 //github.com/raedatoui/glfont v0.0.0-20170222065528-7836ad146bb6 // indirect
 //github.com/raedatoui/glutils v0.0.0-20180204223817-7cd8d44edb49 // indirect
